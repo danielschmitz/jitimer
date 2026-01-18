@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,59 +12,67 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
-    
+
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    
+
     <!-- Babel (para JSX) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        /* Animações customizadas que o Tailwind padrão pode não ter completas */
+        /* Animações customizadas */
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
+
         @keyframes slideUp {
-            from { transform: translateY(100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
-        .animate-in.fade-in { animation: fadeIn 0.2s ease-out forwards; }
-        .animate-in.slide-in-from-bottom { animation: slideUp 0.3s ease-out forwards; }
-        
+
+        .animate-in.fade-in {
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+
+        .animate-in.slide-in-from-bottom {
+            animation: slideUp 0.3s ease-out forwards;
+        }
+
         /* Ajuste para input de data/hora no dark mode */
-        input[type="date"], input[type="time"] {
+        input[type="date"],
+        input[type="time"],
+        input[type="number"] {
             color-scheme: dark;
         }
     </style>
 </head>
-<body class="bg-neutral-900 text-white">
+
+<body class="bg-neutral-900 text-white select-none">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useMemo } = React;
 
-        // --- ICON COMPONENTS (Substituindo lucide-react para evitar dependências externas complexas) ---
+        // --- ICON COMPONENTS ---
         const Icon = ({ children, size = 24, className = "", ...props }) => (
-            <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width={size} 
-                height={size} 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className={className} 
-                {...props}
-            >
-                {children}
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
         );
 
         const Play = (props) => <Icon {...props}><polygon points="5 3 19 12 5 21 5 3"></polygon></Icon>;
@@ -79,30 +88,23 @@
         const Trash2 = (props) => <Icon {...props}><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></Icon>;
         const Download = (props) => <Icon {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></Icon>;
         const Upload = (props) => <Icon {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></Icon>;
+        const Scale = (props) => <Icon {...props}><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></Icon>;
 
         // --- UTILS & HELPERS ---
-        const formatTime = (date) => {
-            return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        };
-
-        const formatDate = (date) => {
-            return date.toLocaleDateString('pt-BR');
-        };
-
+        const formatTime = (date) => date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const formatDate = (date) => date.toLocaleDateString('pt-BR');
         const formatDateForInput = (date) => {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         };
-
         const formatDuration = (seconds) => {
             const h = Math.floor(seconds / 3600);
             const m = Math.floor((seconds % 3600) / 60);
             const s = seconds % 60;
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         };
-
         const calculateProgress = (elapsed, goal) => {
             if (goal <= 0) return 0;
             return Math.min((elapsed / goal) * 100, 100);
@@ -118,42 +120,93 @@
             return (
                 <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
                     <svg className="transform -rotate-90 w-full h-full">
-                        <circle
-                            className="text-neutral-800"
-                            stroke="currentColor"
-                            strokeWidth={strokeWidth}
-                            fill="transparent"
-                            r={radius}
-                            cx={center}
-                            cy={center}
-                        />
-                        <circle
-                            className={`${isActive ? 'text-green-500' : 'text-orange-500'} transition-all duration-1000 ease-out`}
-                            stroke="currentColor"
-                            strokeWidth={strokeWidth}
-                            strokeDasharray={circumference}
-                            strokeDashoffset={offset}
-                            strokeLinecap="round"
-                            fill="transparent"
-                            r={radius}
-                            cx={center}
-                            cy={center}
-                            style={{
-                                filter: isActive ? 'drop-shadow(0 0 6px rgba(74, 222, 128, 0.5))' : 'none'
-                            }}
-                        />
+                        <circle className="text-neutral-800" stroke="currentColor" strokeWidth={strokeWidth} fill="transparent" r={radius} cx={center} cy={center} />
+                        <circle className={`${isActive ? 'text-green-500' : 'text-orange-500'} transition-all duration-1000 ease-out`} stroke="currentColor" strokeWidth={strokeWidth} strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" r={radius} cx={center} cy={center} style={{ filter: isActive ? 'drop-shadow(0 0 6px rgba(74, 222, 128, 0.5))' : 'none' }} />
                         {progress > 0 && progress < 100 && (
-                            <circle 
-                                className={isActive ? 'text-white' : 'text-orange-200'}
-                                fill="currentColor"
-                                r={strokeWidth * 0.6}
-                                cx={center + radius * Math.cos(2 * Math.PI * (progress / 100) - Math.PI / 2)}
-                                cy={center + radius * Math.sin(2 * Math.PI * (progress / 100) - Math.PI / 2)}
-                            />
+                            <circle className={isActive ? 'text-white' : 'text-orange-200'} fill="currentColor" r={strokeWidth * 0.6} cx={center + radius * Math.cos(2 * Math.PI * (progress / 100) - Math.PI / 2)} cy={center + radius * Math.sin(2 * Math.PI * (progress / 100) - Math.PI / 2)} />
                         )}
                     </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        {children}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>
+                </div>
+            );
+        };
+
+        const WeightChart = ({ data }) => {
+            if (!data || data.length < 2) return (
+                <div className="h-40 flex items-center justify-center text-neutral-500 text-sm bg-neutral-800/30 rounded-xl border border-neutral-800 border-dashed">
+                    Adicione mais registros para visualizar o gráfico
+                </div>
+            );
+
+            // Ordenar por data
+            const sortedData = [...data].sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-30);
+
+            // Dimensões
+            const width = 350;
+            const height = 150;
+            const padding = 20;
+
+            // Escalas
+            const weights = sortedData.map(d => d.weight);
+            const minWeight = Math.min(...weights) - 1;
+            const maxWeight = Math.max(...weights) + 1;
+            const rangeWeight = maxWeight - minWeight || 1;
+
+            const getX = (index) => padding + (index / (sortedData.length - 1)) * (width - 2 * padding);
+            const getY = (weight) => height - padding - ((weight - minWeight) / rangeWeight) * (height - 2 * padding);
+
+            // Gerar Caminho (Smooth Curve)
+            const points = sortedData.map((d, i) => ({ x: getX(i), y: getY(d.weight) }));
+
+            let d = `M ${points[0].x} ${points[0].y}`;
+
+            // Usando Curva de Bezier Cúbica Simples (Smoothing)
+            for (let i = 0; i < points.length - 1; i++) {
+                const p0 = points[i > 0 ? i - 1 : i];
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                const p3 = points[i + 2] || p2;
+
+                const cp1x = p1.x + (p2.x - p0.x) * 0.2; // Control point 1
+                const cp1y = p1.y + (p2.y - p0.y) * 0.2;
+                const cp2x = p2.x - (p3.x - p1.x) * 0.2; // Control point 2
+                const cp2y = p2.y - (p3.y - p1.y) * 0.2;
+
+                d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+            }
+
+            // Área de Preenchimento
+            const dArea = `${d} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
+
+            return (
+                <div className="w-full overflow-hidden">
+                    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                        {/* Gradiente */}
+                        <defs>
+                            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#22c55e" stopOpacity="0.2" />
+                                <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+                            </linearGradient>
+                        </defs>
+
+                        {/* Linhas de Grade (Opcional) */}
+                        <line x1={padding} y1={getY(minWeight)} x2={width - padding} y2={getY(minWeight)} stroke="#333" strokeDasharray="4" />
+                        <line x1={padding} y1={getY(maxWeight)} x2={width - padding} y2={getY(maxWeight)} stroke="#333" strokeDasharray="4" />
+
+                        {/* Área */}
+                        <path d={dArea} fill="url(#chartGradient)" />
+
+                        {/* Linha */}
+                        <path d={d} fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+
+                        {/* Pontos */}
+                        {points.map((p, i) => (
+                            <circle key={i} cx={p.x} cy={p.y} r="3" fill="#171717" stroke="#22c55e" strokeWidth="2" />
+                        ))}
+                    </svg>
+                    <div className="flex justify-between text-[10px] text-neutral-500 px-2 mt-1 font-mono">
+                        <span>{new Date(sortedData[0].date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' })}</span>
+                        <span>{new Date(sortedData[sortedData.length - 1].date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' })}</span>
                     </div>
                 </div>
             );
@@ -167,122 +220,99 @@
             const [endTime, setEndTime] = useState(null);
             const [elapsed, setElapsed] = useState(0);
             const [history, setHistory] = useState([]);
-            
-            // Settings State
-            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-            const [targetHours, setTargetHours] = useState(18); // Default 18h
-            const [protocolLabel, setProtocolLabel] = useState('18:6');
+            const [weightHistory, setWeightHistory] = useState([]); // Novo Estado para Peso
 
-            // Edit Time State (Reused for Start and End)
+            // UI State
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
             const [isEditTimeOpen, setIsEditTimeOpen] = useState(false);
-            const [editMode, setEditMode] = useState('start'); // 'start' | 'end'
+            const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+            const [isWeightOpen, setIsWeightOpen] = useState(false); // Novo Modal
+
+            // Config & Form State
+            const [targetHours, setTargetHours] = useState(18);
+            const [protocolLabel, setProtocolLabel] = useState('18:6');
+            const [editMode, setEditMode] = useState('start');
             const [editTimeValue, setEditTimeValue] = useState('');
             const [editDateValue, setEditDateValue] = useState('');
 
-            // History Modal State
-            const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+            // Weight Form
+            const [weightValue, setWeightValue] = useState('');
+            const [weightDate, setWeightDate] = useState('');
 
-            // File Input Ref for Import
             const fileInputRef = useRef(null);
-
-            // Derived
             const goalSeconds = targetHours * 3600;
-
-            // Refs for interval
             const timerRef = useRef(null);
 
-            // Load from local storage on mount
+            // --- EFFECTS ---
+            // Load Data
             useEffect(() => {
                 const savedState = localStorage.getItem('jitimer_state');
                 const savedConfig = localStorage.getItem('jitimer_config');
                 const savedHistory = localStorage.getItem('jitimer_history');
+                const savedWeight = localStorage.getItem('jitimer_weight'); // Carregar peso
 
-                // Load History
-                if (savedHistory) {
-                    setHistory(JSON.parse(savedHistory));
-                }
-
-                // Load Config first
+                if (savedHistory) setHistory(JSON.parse(savedHistory));
+                if (savedWeight) setWeightHistory(JSON.parse(savedWeight));
                 if (savedConfig) {
                     const config = JSON.parse(savedConfig);
                     if (config.targetHours) setTargetHours(config.targetHours);
                     if (config.protocolLabel) setProtocolLabel(config.protocolLabel);
                 }
-
-                // Load Timer State
                 if (savedState) {
                     const parsed = JSON.parse(savedState);
                     if (parsed.isFasting && parsed.startTime) {
                         setIsFasting(true);
                         const start = new Date(parsed.startTime);
                         setStartTime(start);
-                        
-                        // Recalculate goal seconds based on potentially loaded config or default
                         const currentTarget = savedConfig ? JSON.parse(savedConfig).targetHours : 18;
                         const currentGoalSeconds = currentTarget * 3600;
-
-                        const end = new Date(start.getTime() + currentGoalSeconds * 1000);
-                        setEndTime(end);
-
-                        // Update elapsed immediately
-                        const now = new Date();
-                        const diff = Math.floor((now.getTime() - start.getTime()) / 1000);
-                        setElapsed(diff);
+                        setEndTime(new Date(start.getTime() + currentGoalSeconds * 1000));
+                        setElapsed(Math.floor((new Date().getTime() - start.getTime()) / 1000));
                     }
                 }
             }, []);
 
-            // Timer Logic
+            // Timer Loop
             useEffect(() => {
                 if (isFasting && startTime) {
                     timerRef.current = setInterval(() => {
-                        const now = new Date();
-                        const diff = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-                        setElapsed(diff);
+                        setElapsed(Math.floor((new Date().getTime() - startTime.getTime()) / 1000));
                     }, 1000);
                 } else {
                     if (timerRef.current) clearInterval(timerRef.current);
                 }
-
-                return () => {
-                    if (timerRef.current) clearInterval(timerRef.current);
-                };
+                return () => { if (timerRef.current) clearInterval(timerRef.current); };
             }, [isFasting, startTime]);
 
-            // Persist State (Timer)
+            // Persist Data
             useEffect(() => {
                 if (isFasting && startTime) {
-                    localStorage.setItem('jitimer_state', JSON.stringify({
-                        isFasting: true,
-                        startTime: startTime.toISOString()
-                    }));
+                    localStorage.setItem('jitimer_state', JSON.stringify({ isFasting: true, startTime: startTime.toISOString() }));
                 } else {
                     localStorage.removeItem('jitimer_state');
                 }
             }, [isFasting, startTime]);
 
-            // Persist Config
             useEffect(() => {
-                localStorage.setItem('jitimer_config', JSON.stringify({
-                    targetHours,
-                    protocolLabel
-                }));
+                localStorage.setItem('jitimer_config', JSON.stringify({ targetHours, protocolLabel }));
             }, [targetHours, protocolLabel]);
 
-            // Persist History
             useEffect(() => {
                 localStorage.setItem('jitimer_history', JSON.stringify(history));
             }, [history]);
 
-            // Update endTime if targetHours changes while fasting
+            useEffect(() => {
+                localStorage.setItem('jitimer_weight', JSON.stringify(weightHistory));
+            }, [weightHistory]);
+
+            // Recalculate End Time on Config Change
             useEffect(() => {
                 if (isFasting && startTime) {
-                    const newEndTime = new Date(startTime.getTime() + goalSeconds * 1000);
-                    setEndTime(newEndTime);
+                    setEndTime(new Date(startTime.getTime() + goalSeconds * 1000));
                 }
             }, [targetHours, isFasting, startTime]);
 
-            // Handlers
+            // --- HANDLERS ---
             const handleStart = () => {
                 const now = new Date();
                 setStartTime(now);
@@ -293,8 +323,6 @@
 
             const handleStopClick = () => {
                 if (!startTime) return;
-                
-                // Open modal to confirm end time instead of direct alert
                 setEditMode('end');
                 const now = new Date();
                 setEditTimeValue(formatTime(now));
@@ -303,7 +331,7 @@
             };
 
             const deleteRecord = (id) => {
-                if(window.confirm("Tem certeza que deseja apagar este registro?")) {
+                if (window.confirm("Tem certeza que deseja apagar este registro?")) {
                     setHistory(prev => prev.filter(r => r.id !== id));
                 }
             };
@@ -318,7 +346,6 @@
 
             const saveEditedTime = () => {
                 if (!editTimeValue || !editDateValue) return;
-
                 const [hours, minutes] = editTimeValue.split(':').map(Number);
                 const [year, month, day] = editDateValue.split('-').map(Number);
 
@@ -326,20 +353,15 @@
                     const selectedDate = new Date(year, month - 1, day, hours, minutes);
 
                     if (editMode === 'start') {
-                        // Logic for Editing Start Time
                         setStartTime(selectedDate);
                         setEndTime(new Date(selectedDate.getTime() + goalSeconds * 1000));
-                        const now = new Date();
-                        setElapsed(Math.floor((now.getTime() - selectedDate.getTime()) / 1000));
+                        setElapsed(Math.floor((new Date().getTime() - selectedDate.getTime()) / 1000));
                     } else {
-                        // Logic for Ending Fast (Saving to History)
                         if (selectedDate < startTime) {
                             alert("A data de término não pode ser anterior ao início.");
                             return;
                         }
-
                         const finalDuration = Math.floor((selectedDate.getTime() - startTime.getTime()) / 1000);
-                        
                         const newRecord = {
                             id: crypto.randomUUID(),
                             startTime: startTime.toISOString(),
@@ -349,17 +371,37 @@
                             targetHours: targetHours,
                             completed: finalDuration >= goalSeconds
                         };
-
                         setHistory(prev => [newRecord, ...prev]);
-
-                        // Reset Timer
                         setIsFasting(false);
                         setStartTime(null);
                         setEndTime(null);
                         setElapsed(0);
                     }
-                    
                     setIsEditTimeOpen(false);
+                }
+            };
+
+            // Weight Handlers
+            const handleOpenWeight = () => {
+                setWeightDate(formatDateForInput(new Date()));
+                setWeightValue('');
+                setIsWeightOpen(true);
+            };
+
+            const saveWeight = () => {
+                if (!weightValue || !weightDate) return;
+                const newEntry = {
+                    id: crypto.randomUUID(),
+                    date: weightDate,
+                    weight: parseFloat(weightValue)
+                };
+                setWeightHistory(prev => [...prev, newEntry].sort((a, b) => new Date(b.date) - new Date(a.date)));
+                setWeightValue('');
+            };
+
+            const deleteWeight = (id) => {
+                if (window.confirm("Apagar este registro de peso?")) {
+                    setWeightHistory(prev => prev.filter(r => r.id !== id));
                 }
             };
 
@@ -369,14 +411,13 @@
                 setIsSettingsOpen(false);
             };
 
-            // --- EXPORT & IMPORT HANDLERS ---
             const handleExport = () => {
                 const data = {
                     state: localStorage.getItem('jitimer_state'),
                     config: localStorage.getItem('jitimer_config'),
-                    history: localStorage.getItem('jitimer_history')
+                    history: localStorage.getItem('jitimer_history'),
+                    weight: localStorage.getItem('jitimer_weight')
                 };
-
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -391,61 +432,38 @@
             const handleImport = (event) => {
                 const file = event.target.files?.[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
-                        const content = e.target?.result;
-                        const data = JSON.parse(content);
-                        
-                        // Validate and Update LocalStorage
+                        const data = JSON.parse(e.target?.result);
                         if (data.history) localStorage.setItem('jitimer_history', data.history);
+                        if (data.weight) localStorage.setItem('jitimer_weight', data.weight); // Importar peso
                         if (data.config) localStorage.setItem('jitimer_config', data.config);
                         if (data.state) localStorage.setItem('jitimer_state', data.state);
 
-                        // Update State directly to reflect changes immediately
-                        if (data.history) {
-                            setHistory(JSON.parse(data.history));
-                        }
-
+                        if (data.history) setHistory(JSON.parse(data.history));
+                        if (data.weight) setWeightHistory(JSON.parse(data.weight));
                         if (data.config) {
                             const cfg = JSON.parse(data.config);
                             if (cfg.targetHours) setTargetHours(cfg.targetHours);
                             if (cfg.protocolLabel) setProtocolLabel(cfg.protocolLabel);
                         }
-
                         if (data.state) {
                             const st = JSON.parse(data.state);
                             if (st && st.isFasting && st.startTime) {
                                 setIsFasting(true);
                                 const start = new Date(st.startTime);
                                 setStartTime(start);
-                                
-                                // Recalculate based on current config (or imported config)
                                 const cfgTarget = data.config ? JSON.parse(data.config).targetHours : targetHours;
-                                const cfgGoalSeconds = cfgTarget * 3600;
-                                
-                                setEndTime(new Date(start.getTime() + cfgGoalSeconds * 1000));
-                                
-                                const now = new Date();
-                                setElapsed(Math.floor((now.getTime() - start.getTime()) / 1000));
+                                setEndTime(new Date(start.getTime() + (cfgTarget * 3600) * 1000));
+                                setElapsed(Math.floor((new Date().getTime() - start.getTime()) / 1000));
                             } else {
-                                setIsFasting(false);
-                                setStartTime(null);
-                                setEndTime(null);
-                                setElapsed(0);
+                                setIsFasting(false); setStartTime(null); setEndTime(null); setElapsed(0);
                             }
                         }
-
                         alert('Dados importados com sucesso!');
-                    } catch (err) {
-                        console.error(err);
-                        alert('Erro ao importar arquivo. Verifique se é um backup válido do JITimer.');
-                    } finally {
-                        if (fileInputRef.current) {
-                            fileInputRef.current.value = '';
-                        }
-                    }
+                    } catch (err) { console.error(err); alert('Erro ao importar arquivo.'); }
+                    finally { if (fileInputRef.current) fileInputRef.current.value = ''; }
                 };
                 reader.readAsText(file);
             };
@@ -455,169 +473,95 @@
             const isGoalReached = elapsed >= goalSeconds;
 
             return (
-                <div className="min-h-screen bg-neutral-900 text-white font-sans selection:bg-green-500 selection:text-black flex flex-col items-center relative overflow-hidden">
-                    
-                    {/* Background Ambient Glow */}
+                <div className="min-h-screen bg-neutral-900 text-white font-sans flex flex-col items-center relative overflow-hidden">
                     <div className={`absolute top-[-20%] left-[-20%] w-[140%] h-[80%] rounded-full opacity-10 blur-3xl pointer-events-none transition-colors duration-1000 ${isFasting ? 'bg-green-900' : 'bg-orange-900'}`} />
 
-                    {/* Header */}
                     <header className="w-full max-w-md p-6 flex justify-between items-center z-10">
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${isFasting ? 'bg-green-500 animate-pulse' : 'bg-neutral-500'}`} />
                             <span className="font-semibold tracking-wide">JITimer</span>
                         </div>
-                        
                         <div className="flex items-center gap-2">
-                            {/* Import Button */}
-                            <input 
-                                type="file" 
-                                ref={fileInputRef} 
-                                onChange={handleImport} 
-                                className="hidden" 
-                                accept=".json"
-                            />
-                            <button 
-                                onClick={() => fileInputRef.current?.click()}
-                                className="p-2 rounded-full hover:bg-neutral-800 transition-colors text-neutral-400"
-                                title="Importar Backup"
-                            >
-                                <Upload size={20} />
-                            </button>
-
-                            {/* Export Button */}
-                            <button 
-                                onClick={handleExport}
-                                className="p-2 rounded-full hover:bg-neutral-800 transition-colors text-neutral-400"
-                                title="Exportar Backup"
-                            >
-                                <Download size={20} />
-                            </button>
-
-                            {/* Settings Button */}
-                            <button 
-                                onClick={() => setIsSettingsOpen(true)}
-                                className="p-2 rounded-full hover:bg-neutral-800 transition-colors text-neutral-400"
-                                title="Configurações"
-                            >
-                                <Settings size={20} />
-                            </button>
+                            <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json" />
+                            <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-full hover:bg-neutral-800 transition-colors text-neutral-400" title="Importar"><Upload size={20} /></button>
+                            <button onClick={handleExport} className="p-2 rounded-full hover:bg-neutral-800 transition-colors text-neutral-400" title="Exportar"><Download size={20} /></button>
+                            <button onClick={() => setIsSettingsOpen(true)} className="p-2 rounded-full hover:bg-neutral-800 transition-colors text-neutral-400" title="Configurações"><Settings size={20} /></button>
                         </div>
                     </header>
 
-                    {/* Main Content */}
                     <main className="flex-1 w-full max-w-md flex flex-col items-center justify-center p-6 z-10 gap-8">
-                        
-                        {/* Status Chip */}
                         <div className={`px-4 py-1.5 rounded-full text-sm font-medium tracking-wide flex items-center gap-2 transition-colors duration-500 ${isFasting ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-neutral-800 text-neutral-400 border border-neutral-700'}`}>
-                            {isFasting ? (
-                                isGoalReached ? 'Objetivo Alcançado 🎉' : 'Você está jejuando'
-                            ) : (
-                                'Pronto para jejuar?'
-                            )}
+                            {isFasting ? (isGoalReached ? 'Objetivo Alcançado 🎉' : 'Você está jejuando') : 'Pronto para jejuar?'}
                         </div>
 
-                        {/* The Circular Timer Component */}
                         <div className="relative">
-                            <CircularProgress 
-                                progress={isFasting ? progress : 0} 
-                                isActive={isFasting}
-                                size={300}
-                                strokeWidth={10}
-                            >
+                            <CircularProgress progress={isFasting ? progress : 0} isActive={isFasting} size={300} strokeWidth={10}>
                                 <div className="flex flex-col items-center text-center">
-                                    <span className="text-neutral-400 text-sm font-medium mb-1">
-                                        {isFasting ? 'Tempo decorrido' : `Protocolo ${protocolLabel}`}
-                                    </span>
-                                    <div className="text-5xl font-bold tabular-nums tracking-tight my-2">
-                                        {isFasting ? formatDuration(elapsed) : `${targetHours}:00`}
-                                    </div>
-                                    
+                                    <span className="text-neutral-400 text-sm font-medium mb-1">{isFasting ? 'Tempo decorrido' : `Protocolo ${protocolLabel}`}</span>
+                                    <div className="text-5xl font-bold tabular-nums tracking-tight my-2">{isFasting ? formatDuration(elapsed) : `${targetHours}:00`}</div>
                                     {isFasting && (
                                         <div className="flex items-center gap-2 text-sm text-neutral-500 mt-2">
-                                            {protocolLabel === 'Livre' ? (
-                                                <span>Modo Livre</span>
-                                            ) : (
-                                                <span>Faltam {formatDuration(remaining)}</span>
-                                            )}
+                                            {protocolLabel === 'Livre' ? <span>Modo Livre</span> : <span>Faltam {formatDuration(remaining)}</span>}
                                         </div>
                                     )}
                                 </div>
                             </CircularProgress>
                         </div>
 
-                        {/* Start/End Times Row */}
                         <div className="grid grid-cols-2 w-full gap-4 mt-4">
                             <div className="bg-neutral-800/50 backdrop-blur-sm rounded-2xl p-4 flex flex-col items-center justify-center border border-neutral-800">
                                 <span className="text-neutral-500 text-xs mb-1">Iniciou</span>
                                 <div className="flex items-center gap-2">
                                     <div className="flex flex-col items-end">
-                                        <span className="text-xl font-medium text-neutral-200 leading-none">
-                                            {startTime ? formatTime(startTime) : '--:--'}
-                                        </span>
+                                        <span className="text-xl font-medium text-neutral-200 leading-none">{startTime ? formatTime(startTime) : '--:--'}</span>
                                         {startTime && <span className="text-[10px] text-neutral-500">{formatDate(startTime)}</span>}
                                     </div>
-                                    {isFasting && (
-                                        <button 
-                                            onClick={handleEditStart}
-                                            className="text-neutral-600 hover:text-green-400 transition-colors p-1"
-                                            title="Editar horário e data de início"
-                                        >
-                                            <Edit2 size={14} />
-                                        </button>
-                                    )}
+                                    {isFasting && <button onClick={handleEditStart} className="text-neutral-600 hover:text-green-400 transition-colors p-1"><Edit2 size={14} /></button>}
                                 </div>
                             </div>
                             <div className="bg-neutral-800/50 backdrop-blur-sm rounded-2xl p-4 flex flex-col items-center justify-center border border-neutral-800">
                                 <span className="text-neutral-500 text-xs mb-1">Termina</span>
                                 <div className="flex flex-col items-center">
-                                    <span className="text-xl font-medium text-neutral-200 leading-none">
-                                        {endTime && protocolLabel !== 'Livre' ? formatTime(endTime) : '--:--'}
-                                    </span>
-                                    {endTime && protocolLabel !== 'Livre' && (
-                                        <span className="text-[10px] text-neutral-500">{formatDate(endTime)}</span>
-                                    )}
+                                    <span className="text-xl font-medium text-neutral-200 leading-none">{endTime && protocolLabel !== 'Livre' ? formatTime(endTime) : '--:--'}</span>
+                                    {endTime && protocolLabel !== 'Livre' && <span className="text-[10px] text-neutral-500">{formatDate(endTime)}</span>}
                                     {protocolLabel === 'Livre' && <span className="text-xl font-medium text-neutral-600">--:--</span>}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Main Action Button */}
                         <div className="w-full mt-2">
                             {!isFasting ? (
-                                <button 
-                                    onClick={handleStart}
-                                    className="w-full bg-green-500 hover:bg-green-400 text-black font-bold py-4 rounded-2xl shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-lg"
-                                >
-                                    <Play fill="currentColor" size={20} />
-                                    Iniciar Jejum
+                                <button onClick={handleStart} className="w-full bg-green-500 hover:bg-green-400 text-black font-bold py-4 rounded-2xl shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-lg">
+                                    <Play fill="currentColor" size={20} /> Iniciar Jejum
                                 </button>
                             ) : (
-                                <button 
-                                    onClick={handleStopClick}
-                                    className="w-full bg-neutral-800 hover:bg-neutral-700 text-red-400 hover:text-red-300 font-bold py-4 rounded-2xl border border-neutral-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-lg"
-                                >
-                                    <Square fill="currentColor" size={20} />
-                                    Encerrar Jejum
+                                <button onClick={handleStopClick} className="w-full bg-neutral-800 hover:bg-neutral-700 text-red-400 hover:text-red-300 font-bold py-4 rounded-2xl border border-neutral-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-lg">
+                                    <Square fill="currentColor" size={20} /> Encerrar Jejum
                                 </button>
                             )}
                         </div>
-
                     </main>
 
-                    {/* Footer / Stats Teaser */}
-                    <footer className="w-full max-w-md p-6 pb-8 z-10">
-                        <button 
-                            onClick={() => setIsHistoryOpen(true)}
-                            className="w-full bg-neutral-800/30 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:bg-neutral-800/50 transition-colors border border-transparent hover:border-neutral-700"
-                        >
+                    <footer className="w-full max-w-md p-6 pb-8 z-10 flex flex-col gap-3">
+                        <button onClick={() => setIsHistoryOpen(true)} className="w-full bg-neutral-800/30 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:bg-neutral-800/50 transition-colors border border-transparent hover:border-neutral-700">
                             <div className="flex items-center gap-3">
-                                <div className="bg-neutral-800 p-2 rounded-lg text-green-500">
-                                    <HistoryIcon size={20} />
-                                </div>
+                                <div className="bg-neutral-800 p-2 rounded-lg text-green-500"><HistoryIcon size={20} /></div>
                                 <div className="flex flex-col items-start">
                                     <span className="text-sm font-medium text-neutral-200">Histórico de Jejuns</span>
+                                    <span className="text-xs text-neutral-500">{history.length} {history.length === 1 ? 'registro salvo' : 'registros salvos'}</span>
+                                </div>
+                            </div>
+                            <ChevronRight className="text-neutral-600" size={20} />
+                        </button>
+
+                        {/* Novo Botão de Peso */}
+                        <button onClick={handleOpenWeight} className="w-full bg-neutral-800/30 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:bg-neutral-800/50 transition-colors border border-transparent hover:border-neutral-700">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-neutral-800 p-2 rounded-lg text-blue-500"><Scale size={20} /></div>
+                                <div className="flex flex-col items-start">
+                                    <span className="text-sm font-medium text-neutral-200">Acompanhar Peso</span>
                                     <span className="text-xs text-neutral-500">
-                                        {history.length} {history.length === 1 ? 'registro salvo' : 'registros salvos'}
+                                        {weightHistory.length > 0 ? `${weightHistory[0].weight}kg (atual)` : 'Nenhum registro'}
                                     </span>
                                 </div>
                             </div>
@@ -625,37 +569,16 @@
                         </button>
                     </footer>
 
-                    {/* Settings Modal */}
+                    {/* Modals Existentes */}
                     {isSettingsOpen && (
                         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                             <div className="bg-neutral-900 w-full max-w-sm rounded-3xl border border-neutral-800 shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300">
-                                <div className="p-6 border-b border-neutral-800 flex justify-between items-center">
-                                    <h2 className="text-xl font-bold text-white">Protocolo de Jejum</h2>
-                                    <button onClick={() => setIsSettingsOpen(false)} className="text-neutral-400 hover:text-white">
-                                        <X size={24} />
-                                    </button>
-                                </div>
+                                <div className="p-6 border-b border-neutral-800 flex justify-between items-center"><h2 className="text-xl font-bold text-white">Protocolo</h2><button onClick={() => setIsSettingsOpen(false)} className="text-neutral-400"><X size={24} /></button></div>
                                 <div className="p-4 flex flex-col gap-2">
-                                    {[
-                                        { label: '16:8', desc: 'Iniciante - 16h jejum, 8h alimentação', hours: 16 },
-                                        { label: '18:6', desc: 'Intermediário - 18h jejum, 6h alimentação', hours: 18 },
-                                        { label: '24:0', desc: 'Guerreiro - 24h jejum completo', hours: 24 },
-                                        { label: 'Livre', desc: 'Flexível - Sem meta fixa definida', hours: 12 }
-                                    ].map((proto) => (
-                                        <button
-                                            key={proto.label}
-                                            onClick={() => selectProtocol(proto.label, proto.hours)}
-                                            className={`w-full p-4 rounded-xl flex items-center justify-between transition-all ${
-                                                protocolLabel === proto.label 
-                                                ? 'bg-green-500/10 border border-green-500/50 text-green-400' 
-                                                : 'bg-neutral-800/50 border border-neutral-800 text-neutral-300 hover:bg-neutral-800'
-                                            }`}
-                                        >
-                                            <div className="flex flex-col items-start">
-                                                <span className="font-bold text-lg">{proto.label}</span>
-                                                <span className="text-xs opacity-70">{proto.desc}</span>
-                                            </div>
-                                            {protocolLabel === proto.label && <Check size={20} />}
+                                    {[{ l: '16:8', d: 'Iniciante - 16h', h: 16 }, { l: '18:6', d: 'Intermediário - 18h', h: 18 }, { l: '24:0', d: 'Guerreiro - 24h', h: 24 }, { l: 'Livre', d: 'Flexível', h: 12 }].map((p) => (
+                                        <button key={p.l} onClick={() => selectProtocol(p.l, p.h)} className={`w-full p-4 rounded-xl flex items-center justify-between ${protocolLabel === p.l ? 'bg-green-500/10 border-green-500/50 text-green-400' : 'bg-neutral-800/50 text-neutral-300'}`}>
+                                            <div className="flex flex-col items-start"><span className="font-bold">{p.l}</span><span className="text-xs opacity-70">{p.d}</span></div>
+                                            {protocolLabel === p.l && <Check size={20} />}
                                         </button>
                                     ))}
                                 </div>
@@ -663,113 +586,86 @@
                         </div>
                     )}
 
-                    {/* Edit Time / End Fast Modal */}
                     {isEditTimeOpen && (
                         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                             <div className="bg-neutral-900 w-full max-w-sm rounded-3xl border border-neutral-800 shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300">
-                                <div className="p-6 border-b border-neutral-800 flex justify-between items-center">
-                                    <h2 className="text-xl font-bold text-white">
-                                        {editMode === 'start' ? 'Editar Início' : 'Encerrar Jejum'}
-                                    </h2>
-                                    <button onClick={() => setIsEditTimeOpen(false)} className="text-neutral-400 hover:text-white">
-                                        <X size={24} />
-                                    </button>
-                                </div>
+                                <div className="p-6 border-b border-neutral-800 flex justify-between items-center"><h2 className="text-xl font-bold text-white">{editMode === 'start' ? 'Editar Início' : 'Encerrar'}</h2><button onClick={() => setIsEditTimeOpen(false)} className="text-neutral-400"><X size={24} /></button></div>
                                 <div className="p-6 flex flex-col gap-4">
-                                    <div className="text-sm text-neutral-500 mb-[-10px]">
-                                        {editMode === 'start' ? 'Iniciou em:' : 'Terminou em:'}
-                                    </div>
-                                    <div className="bg-neutral-800 p-4 rounded-2xl flex items-center gap-4 w-full border border-neutral-700">
-                                        <Calendar className="text-neutral-400" size={24} />
-                                        <input 
-                                            type="date" 
-                                            value={editDateValue}
-                                            onChange={(e) => setEditDateValue(e.target.value)}
-                                            className="bg-transparent text-lg font-medium text-white focus:outline-none w-full"
-                                        />
-                                    </div>
-                                    <div className="bg-neutral-800 p-4 rounded-2xl flex items-center gap-4 w-full border border-neutral-700">
-                                        <Clock className={editMode === 'start' ? "text-green-500" : "text-red-500"} size={24} />
-                                        <input 
-                                            type="time" 
-                                            value={editTimeValue}
-                                            onChange={(e) => setEditTimeValue(e.target.value)}
-                                            className="bg-transparent text-3xl font-bold text-white focus:outline-none font-mono w-full"
-                                        />
-                                    </div>
-                                    <div className="flex gap-3 w-full mt-2">
-                                        <button 
-                                            onClick={() => setIsEditTimeOpen(false)}
-                                            className="flex-1 bg-neutral-800 text-neutral-300 py-3 rounded-xl font-medium hover:bg-neutral-700 transition-colors"
-                                        >
-                                            Cancelar
-                                        </button>
-                                        <button 
-                                            onClick={saveEditedTime}
-                                            className={`flex-1 text-white py-3 rounded-xl font-bold transition-colors ${editMode === 'start' ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
-                                        >
-                                            {editMode === 'start' ? 'Salvar' : 'Confirmar'}
-                                        </button>
-                                    </div>
+                                    <div className="bg-neutral-800 p-4 rounded-2xl flex items-center gap-4 w-full border border-neutral-700"><Calendar className="text-neutral-400" size={24} /><input type="date" value={editDateValue} onChange={(e) => setEditDateValue(e.target.value)} className="bg-transparent text-lg font-medium text-white w-full" /></div>
+                                    <div className="bg-neutral-800 p-4 rounded-2xl flex items-center gap-4 w-full border border-neutral-700"><Clock className={editMode === 'start' ? "text-green-500" : "text-red-500"} size={24} /><input type="time" value={editTimeValue} onChange={(e) => setEditTimeValue(e.target.value)} className="bg-transparent text-3xl font-bold text-white font-mono w-full" /></div>
+                                    <div className="flex gap-3 w-full mt-2"><button onClick={() => setIsEditTimeOpen(false)} className="flex-1 bg-neutral-800 text-neutral-300 py-3 rounded-xl font-medium">Cancelar</button><button onClick={saveEditedTime} className={`flex-1 text-white py-3 rounded-xl font-bold ${editMode === 'start' ? 'bg-green-600' : 'bg-red-600'}`}>{editMode === 'start' ? 'Salvar' : 'Confirmar'}</button></div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* History Modal */}
                     {isHistoryOpen && (
                         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                             <div className="bg-neutral-900 w-full max-w-md h-[80vh] flex flex-col rounded-t-3xl sm:rounded-3xl border border-neutral-800 shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300">
-                                <div className="p-6 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 z-10">
-                                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                        <HistoryIcon size={20} className="text-green-500"/>
-                                        Histórico
-                                    </h2>
-                                    <button onClick={() => setIsHistoryOpen(false)} className="text-neutral-400 hover:text-white">
-                                        <X size={24} />
-                                    </button>
-                                </div>
+                                <div className="p-6 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 z-10"><h2 className="text-xl font-bold text-white flex items-center gap-2"><HistoryIcon size={20} className="text-green-500" /> Histórico</h2><button onClick={() => setIsHistoryOpen(false)} className="text-neutral-400"><X size={24} /></button></div>
                                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                                    {history.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-full text-neutral-500 space-y-2 opacity-50">
-                                            <Clock size={48} />
-                                            <span>Nenhum jejum registrado ainda.</span>
-                                        </div>
-                                    ) : (
-                                        history.map((record) => (
-                                            <div key={record.id} className="bg-neutral-800/50 rounded-xl p-4 flex items-center justify-between border border-neutral-800">
-                                                <div className="flex flex-col gap-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-white font-medium">
-                                                            {new Date(record.startTime).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
-                                                        </span>
-                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${record.completed ? 'bg-green-900/30 border-green-800 text-green-400' : 'bg-red-900/30 border-red-800 text-red-400'}`}>
-                                                            {record.protocol}
-                                                        </span>
-                                                    </div>
-                                                    <span className="text-xs text-neutral-400">
-                                                        {formatTime(new Date(record.startTime))} - {formatTime(new Date(record.endTime))}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-4">
-                                                    <span className="text-lg font-bold tabular-nums text-neutral-200">
-                                                        {formatDuration(record.durationSeconds)}
-                                                    </span>
-                                                    <button 
-                                                        onClick={() => deleteRecord(record.id)}
-                                                        className="text-neutral-600 hover:text-red-400 transition-colors p-1"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
+                                    {history.length === 0 ? <div className="flex flex-col items-center justify-center h-full text-neutral-500 space-y-2 opacity-50"><Clock size={48} /><span>Vazio.</span></div> : history.map((r) => (
+                                        <div key={r.id} className="bg-neutral-800/50 rounded-xl p-4 flex items-center justify-between border border-neutral-800">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2"><span className="text-white font-medium">{new Date(r.startTime).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}</span><span className={`text-[10px] px-1.5 py-0.5 rounded border ${r.completed ? 'bg-green-900/30 border-green-800 text-green-400' : 'bg-red-900/30 border-red-800 text-red-400'}`}>{r.protocol}</span></div>
+                                                <span className="text-xs text-neutral-400">{formatTime(new Date(r.startTime))} - {formatTime(new Date(r.endTime))}</span>
                                             </div>
-                                        ))
-                                    )}
+                                            <div className="flex items-center gap-4"><span className="text-lg font-bold tabular-nums text-neutral-200">{formatDuration(r.durationSeconds)}</span><button onClick={() => deleteRecord(r.id)} className="text-neutral-600 hover:text-red-400"><Trash2 size={16} /></button></div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
                     )}
 
+                    {/* Weight Modal */}
+                    {isWeightOpen && (
+                        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                            <div className="bg-neutral-900 w-full max-w-md h-[80vh] flex flex-col rounded-t-3xl sm:rounded-3xl border border-neutral-800 shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300">
+                                <div className="p-6 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 z-10">
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2"><Scale size={20} className="text-blue-500" /> Controle de Peso</h2>
+                                    <button onClick={() => setIsWeightOpen(false)} className="text-neutral-400"><X size={24} /></button>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+                                    {/* Gráfico */}
+                                    <div className="w-full bg-neutral-800/50 rounded-2xl border border-neutral-800 p-4 h-48 flex items-center justify-center">
+                                        <WeightChart data={weightHistory} />
+                                    </div>
+
+                                    {/* Inputs */}
+                                    <div className="flex gap-2">
+                                        <div className="bg-neutral-800 p-4 rounded-xl flex items-center gap-2 flex-1 border border-neutral-700">
+                                            <Calendar className="text-neutral-400" size={20} />
+                                            <input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} className="bg-transparent text-sm font-medium text-white w-full" />
+                                        </div>
+                                        <div className="bg-neutral-800 p-4 rounded-xl flex items-center gap-2 w-32 border border-neutral-700">
+                                            <input type="number" step="0.1" placeholder="kg" value={weightValue} onChange={(e) => setWeightValue(e.target.value)} className="bg-transparent text-lg font-bold text-white w-full text-right" />
+                                            <span className="text-neutral-500 text-sm">kg</span>
+                                        </div>
+                                        <button onClick={saveWeight} className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl flex items-center justify-center transition-colors">
+                                            <Check size={24} />
+                                        </button>
+                                    </div>
+
+                                    {/* Lista de Registros */}
+                                    <div className="space-y-3 mt-4">
+                                        <h3 className="text-sm font-medium text-neutral-400 px-1">Registros Recentes</h3>
+                                        {weightHistory.length === 0 ? <div className="text-center text-neutral-600 text-sm py-4">Sem registros de peso.</div> : weightHistory.map((r) => (
+                                            <div key={r.id} className="bg-neutral-800/30 rounded-xl p-4 flex items-center justify-between border border-neutral-800/50">
+                                                <span className="text-neutral-300 font-medium">{new Date(r.date).toLocaleDateString()}</span>
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-lg font-bold tabular-nums text-white">{r.weight} <span className="text-xs font-normal text-neutral-500">kg</span></span>
+                                                    <button onClick={() => deleteWeight(r.id)} className="text-neutral-600 hover:text-red-400"><Trash2 size={16} /></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -777,7 +673,7 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<JITimer />);
 
-          // --- SERVICE WORKER REGISTRATION (PWA) ---
+        // --- SERVICE WORKER REGISTRATION (PWA) ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
@@ -787,4 +683,5 @@
         }
     </script>
 </body>
+
 </html>
