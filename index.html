@@ -211,6 +211,7 @@
             const [history, setHistory] = useState([]);
             const [weightHistory, setWeightHistory] = useState([]);
             const [isDark, setIsDark] = useState(true);
+            const [hasNotified, setHasNotified] = useState(false); // New Notification State
             
             // UI State
             const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -263,6 +264,7 @@
                         const currentGoalSeconds = currentTarget * 3600;
                         setEndTime(new Date(start.getTime() + currentGoalSeconds * 1000));
                         setElapsed(Math.floor((new Date().getTime() - start.getTime()) / 1000));
+                        if (parsed.hasNotified) setHasNotified(parsed.hasNotified);
                     }
                 }
             }, []);
@@ -272,26 +274,47 @@
                 localStorage.setItem('jitimer_theme', isDark);
             }, [isDark]);
 
-            // Timer Loop
+            // Timer Loop & Notification Check
             useEffect(() => {
                 if (isFasting && startTime) {
                     timerRef.current = setInterval(() => {
-                        setElapsed(Math.floor((new Date().getTime() - startTime.getTime()) / 1000));
+                        const now = new Date();
+                        const currentElapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+                        setElapsed(currentElapsed);
+
+                        // NOTIFICATION TRIGGER
+                        if (!hasNotified && protocolLabel !== 'Livre' && currentElapsed >= goalSeconds) {
+                            setHasNotified(true);
+                            if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+                                navigator.serviceWorker.ready.then(registration => {
+                                    registration.showNotification('Jejum Completo! 🎉', {
+                                        body: 'Você alcançou sua meta. Parabéns!',
+                                        icon: 'icon-192.png',
+                                        vibrate: [200, 100, 200],
+                                        tag: 'jitimer-complete'
+                                    });
+                                });
+                            }
+                        }
                     }, 1000);
                 } else {
                     if (timerRef.current) clearInterval(timerRef.current);
                 }
                 return () => { if (timerRef.current) clearInterval(timerRef.current); };
-            }, [isFasting, startTime]);
+            }, [isFasting, startTime, hasNotified, goalSeconds, protocolLabel]);
 
             // Persist Data
             useEffect(() => {
                 if (isFasting && startTime) {
-                    localStorage.setItem('jitimer_state', JSON.stringify({ isFasting: true, startTime: startTime.toISOString() }));
+                    localStorage.setItem('jitimer_state', JSON.stringify({ 
+                        isFasting: true, 
+                        startTime: startTime.toISOString(),
+                        hasNotified: hasNotified 
+                    }));
                 } else {
                     localStorage.removeItem('jitimer_state');
                 }
-            }, [isFasting, startTime]);
+            }, [isFasting, startTime, hasNotified]);
 
             useEffect(() => {
                 localStorage.setItem('jitimer_config', JSON.stringify({ targetHours, protocolLabel }));
@@ -323,6 +346,12 @@
                 setEndTime(new Date(now.getTime() + goalSeconds * 1000));
                 setIsFasting(true);
                 setElapsed(0);
+                setHasNotified(false);
+                
+                // Request Notification Permission
+                if ('Notification' in window && Notification.permission !== 'granted') {
+                    Notification.requestPermission();
+                }
             };
 
             const handleStopClick = () => {
@@ -360,6 +389,10 @@
                         setStartTime(selectedDate);
                         setEndTime(new Date(selectedDate.getTime() + goalSeconds * 1000));
                         setElapsed(Math.floor((new Date().getTime() - selectedDate.getTime()) / 1000));
+                        // Re-enable notification if editing start time pushes completion to future
+                        // Simple logic: just reset if current elapsed < goal
+                        const newElapsed = Math.floor((new Date().getTime() - selectedDate.getTime()) / 1000);
+                        if (newElapsed < goalSeconds) setHasNotified(false);
                     } else {
                         if (selectedDate < startTime) {
                             alert("A data de término não pode ser anterior ao início.");
